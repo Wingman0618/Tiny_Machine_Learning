@@ -7,6 +7,8 @@ int16_t sampleBuffer[512*16];
 
 volatile int samplesRead;
 volatile int32_t audio_timestamp = 0;
+int32_t time_in_ms = 0;
+
 
 bool record = false;
 void setup() {
@@ -34,13 +36,16 @@ void loop() {
   if (clicked){
     record = !record;
   }
-
+  
   if(samplesRead){
     if(record){
+      digitalWrite(LEDG, LOW);
       for(int i=0; i<samplesRead; i++){
         Serial.println(sampleBuffer[i]);
-      }
+      }      
     }
+
+    digitalWrite(LEDG, HIGH);
     samplesRead = 0;
     
   }  
@@ -48,13 +53,13 @@ void loop() {
 }
 
 void onPDMdata(){
-  //int bytesAvailable = PDM.available();
+  int bytesAvailable = PDM.available();
+  // 256 samples read each times
+  samplesRead = bytesAvailable / 2;
+  // 16 samples per millisecond; 
+  time_in_ms = audio_timestamp+(samplesRead / (16000/1000));
 
-  samplesRead = DEFAULT_PDM_BUFFER_SIZE / 2;
-
-  const int32_t time_in_ms = audio_timestamp+(samplesRead / (16000/1000));
-
-  PDM.read(sampleBuffer, DEFAULT_PDM_BUFFER_SIZE);
+  PDM.read(sampleBuffer, bytesAvailable);
 
   audio_timestamp = time_in_ms;
 }

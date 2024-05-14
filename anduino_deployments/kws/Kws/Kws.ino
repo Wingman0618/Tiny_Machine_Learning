@@ -14,7 +14,7 @@ namespace{
   TfLiteTensor *model_input = nullptr;
   int32_t previous_time = 0;
 
-  constexpr int kTensorArenaSize = 161 * 1024;
+  constexpr int kTensorArenaSize = 30 * 1024;
   uint8_t tensor_arena[kTensorArenaSize];
   int8_t *model_input_buffer = nullptr;
   }
