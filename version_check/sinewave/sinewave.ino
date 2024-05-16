@@ -75,6 +75,7 @@ void setup() {
 }
 
 void loop() {
+
   // put your main code here, to run repeatedly:
 #if DEBUG
   unsigned long start_timestamp = micros();
@@ -100,4 +101,5 @@ void loop() {
   Serial.print("Time for inference (us): ");
   Serial.println(micros() - start_timestamp);
 #endif
+
 }
