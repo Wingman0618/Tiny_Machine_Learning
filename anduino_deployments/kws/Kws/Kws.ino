@@ -1,9 +1,7 @@
 #include <TensorFlowLite.h>
+#include <PDM.h>
 
 #include "test_input.h"
-
-#include "PDM.h"
-#include "libmfcc.h"
 
 #include "Ml_model.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
@@ -12,13 +10,11 @@
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
+
+
 // Audio samples
-int16_t sampleBuffer[DEFAULT_PDM_BUFFER_SIZE];
-std::vector<float> input_sampleBuffer(DEFAULT_PDM_BUFFER_SIZE * 20);
-int counter = 0;
+short sampleBuffer[256];
 volatile int samplesRead;
-// fake input
-std::vector<std::vector<std::vector<float>>> mfcc;
 
 namespace{
   //Tensorflow namespace
@@ -48,6 +44,7 @@ void setup() {
       return;
   }
 
+//Reference of adding int32_t to StridedSlice: https://stackoverflow.com/questions/64850356/error-with-strided-slice-in-tensorflow-lite
   static tflite::MicroMutableOpResolver<6> micro_op_resolver(error_reporter);
   if(micro_op_resolver.AddConv2D() != kTfLiteOk){
     return;
@@ -86,39 +83,49 @@ void setup() {
 
   // Setup microphone
   //Reference: https://docs.arduino.cc/learn/built-in-libraries/pdm/
+  Serial.begin(9600);
   PDM.onReceive(onPDMdata);
   PDM.begin(1, 16000);
   PDM.setGain(20);
+
 }
 
 void loop() {
+
   if(samplesRead){
-    digitalWrite(LEDG, LOW);
     for(int i=0; i<samplesRead; i++){
       Serial.println(sampleBuffer[i]);
     }
     samplesRead = 0;
   }
-// Faking inputs "no"
+// Faking inputs
   for(int i=0; i<4096; i++){
-    model_input_buffer[i] = int(input_val[i]);
+    model_input_buffer[i] = (int)roundf(input_val[i]);
   }
-  Serial.println(model_input_buffer[0]);
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
     return;
   }
   
-  TfLiteTensor* output = interpreter->output_tensor(0);
-  Serial.println(model_output->data.int8[0]);
-  Serial.println(model_output->data.int8[1]);
+  int8_t data_no = model_output->data.int8[0];
+  int8_t data_yes = model_output->data.int8[1];
+  
+  if(data_no>data_yes){
+    digitalWrite(LEDG, HIGH);
+    digitalWrite(LEDR, LOW);
+  }else{
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDG, LOW);
+  }
+
   Serial.println("one loop");
-  delay(5000);
 
 }
 
 void onPDMdata(){
   int bytesAvailable = PDM.available();
-  samplesRead = bytesAvailable / 2;
+
   PDM.read(sampleBuffer, bytesAvailable);
+
+  samplesRead = bytesAvailable / 2;
 }
