@@ -1,1 +1,2 @@
-extern const float input_val[];
+#include "stdint.h"
+extern const int8_t input_val[];

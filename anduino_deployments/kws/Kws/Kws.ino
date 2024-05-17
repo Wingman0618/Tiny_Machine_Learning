@@ -4,19 +4,19 @@
 #include "test_input.h"
 
 #include "Ml_model.h"
+#include "Output_analysis.h"
+
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
-
-
-// Audio samples
-short sampleBuffer[256];
-volatile int samplesRead;
-
 namespace{
+  // Audio samples
+  short sampleBuffer[256];
+  volatile int samplesRead;
+  
   //Tensorflow namespace
   tflite::ErrorReporter *error_reporter = nullptr;
   const tflite::Model *model = nullptr;
@@ -24,12 +24,10 @@ namespace{
   TfLiteTensor *model_input = nullptr;
   TfLiteTensor* model_output = nullptr;
 
-  constexpr int kTensorArenaSize = 10 * 1024;
+  constexpr int kTensorArenaSize =10 * 1024;
   uint8_t tensor_arena[kTensorArenaSize];
   int8_t *model_input_buffer = nullptr;
 }
-
-
 
 void setup() {
   // Setup tensorflow lite micro
@@ -45,7 +43,7 @@ void setup() {
   }
 
 //Reference of adding int32_t to StridedSlice: https://stackoverflow.com/questions/64850356/error-with-strided-slice-in-tensorflow-lite
-  static tflite::MicroMutableOpResolver<6> micro_op_resolver(error_reporter);
+  static tflite::MicroMutableOpResolver<7> micro_op_resolver(error_reporter);
   if(micro_op_resolver.AddConv2D() != kTfLiteOk){
     return;
   }
@@ -62,6 +60,9 @@ void setup() {
     return;
   }
   if(micro_op_resolver.AddReshape() != kTfLiteOk){
+    return;
+  }
+  if(micro_op_resolver.AddSoftmax() != kTfLiteOk){
     return;
   }
 
@@ -82,8 +83,7 @@ void setup() {
   model_output = interpreter->output(0);
 
   // Setup microphone
-  //Reference: https://docs.arduino.cc/learn/built-in-libraries/pdm/
-  Serial.begin(9600);
+  //Reference: https://docs.arduino.cc/learn/built-in-libraries/pdm/ 
   PDM.onReceive(onPDMdata);
   PDM.begin(1, 16000);
   PDM.setGain(20);
@@ -100,8 +100,9 @@ void loop() {
   }
 // Faking inputs
   for(int i=0; i<4096; i++){
-    model_input_buffer[i] = (int)roundf(input_val[i]);
+    model_input_buffer[i] = input_val[i];
   }
+
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
     return;
@@ -109,17 +110,28 @@ void loop() {
   
   int8_t data_no = model_output->data.int8[0];
   int8_t data_yes = model_output->data.int8[1];
-  
-  if(data_no>data_yes){
+
+  OutputCommands(data_no, data_yes);
+  /*
+  Serial.print(data_no);
+  Serial.print("  ");
+  Serial.println(data_yes);
+
+  if(data_no>=80){
+    digitalWrite(LEDB, HIGH);
     digitalWrite(LEDG, HIGH);
     digitalWrite(LEDR, LOW);
-  }else{
+  }else if(data_yes>=80){
+    digitalWrite(LEDB, HIGH);
     digitalWrite(LEDR, HIGH);
     digitalWrite(LEDG, LOW);
+  }else{
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDG, HIGH);
+    digitalWrite(LEDB, LOW);
   }
-
+  */
   Serial.println("one loop");
-
 }
 
 void onPDMdata(){
