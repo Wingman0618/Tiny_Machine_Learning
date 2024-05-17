@@ -1,5 +1,7 @@
 #include <TensorFlowLite.h>
 
+#include "test_input.h"
+
 #include "PDM.h"
 #include "libmfcc.h"
 
@@ -24,6 +26,7 @@ namespace{
   const tflite::Model *model = nullptr;
   tflite::MicroInterpreter *interpreter = nullptr;
   TfLiteTensor *model_input = nullptr;
+  TfLiteTensor* model_output = nullptr;
 
   constexpr int kTensorArenaSize = 10 * 1024;
   uint8_t tensor_arena[kTensorArenaSize];
@@ -79,6 +82,8 @@ void setup() {
 
   model_input_buffer = model_input->data.int8;
 
+  model_output = interpreter->output(0);
+
   // Setup microphone
   //Reference: https://docs.arduino.cc/learn/built-in-libraries/pdm/
   PDM.onReceive(onPDMdata);
@@ -90,24 +95,26 @@ void loop() {
   if(samplesRead){
     digitalWrite(LEDG, LOW);
     for(int i=0; i<samplesRead; i++){
-      Serial.print(sampleBuffer[i]);
-      Serial.print(" ");
+      Serial.println(sampleBuffer[i]);
     }
-    Serial.print("\n");
-/*  Checking the copied sampleBuffer
-    for(int i=0; i<samplesRead; i++){
-      Serial.print(input_sampleBuffer[counter - 256 + i]);
-      Serial.print(" ");
-    }
-    Serial.print("\n");
-*/
     samplesRead = 0;
   }
-
-  Serial.print("\n");
-  Serial.println("one loop");
-  delay(1000);
+// Faking inputs "no"
+  for(int i=0; i<4096; i++){
+    model_input_buffer[i] = int(input_val[i]);
+  }
+  Serial.println(model_input_buffer[0]);
+  TfLiteStatus invoke_status = interpreter->Invoke();
+  if (invoke_status != kTfLiteOk) {
+    return;
+  }
   
+  TfLiteTensor* output = interpreter->output_tensor(0);
+  Serial.println(model_output->data.int8[0]);
+  Serial.println(model_output->data.int8[1]);
+  Serial.println("one loop");
+  delay(5000);
+
 }
 
 void onPDMdata(){
