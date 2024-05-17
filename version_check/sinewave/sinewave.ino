@@ -22,7 +22,7 @@ namespace {
   TfLiteTensor* model_input = nullptr;
   TfLiteTensor* model_output = nullptr;
 
-  constexpr int kTensorArenaSize = 5 * 1024;
+  constexpr int kTensorArenaSize = 10 * 1024;
   uint8_t tensor_arena[kTensorArenaSize];
 } // namespace
 
@@ -32,7 +32,7 @@ void setup() {
   while(!Serial);
 #endif
 
-  pinMode(LEDG, OUTPUT);
+  pinMode(LEDR, OUTPUT);
   
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
@@ -46,7 +46,19 @@ void setup() {
     return;
   }
 
-  static tflite::MicroMutableOpResolver<1> micro_op_resolver(error_reporter);
+  static tflite::MicroMutableOpResolver<5> micro_op_resolver(error_reporter);
+  if (micro_op_resolver.AddShape() != kTfLiteOk) {
+    return;
+  }
+  if (micro_op_resolver.AddStridedSlice() != kTfLiteOk) {
+    return;
+  }
+  if (micro_op_resolver.AddPack() != kTfLiteOk) {
+    return;
+  }
+  if (micro_op_resolver.AddReshape() != kTfLiteOk) {
+    return;
+  }
   if (micro_op_resolver.AddFullyConnected() != kTfLiteOk) {
     return;
   }

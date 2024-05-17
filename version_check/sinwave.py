@@ -8,7 +8,7 @@ from tensorflow.keras import layers
 
 print('Numpy ' + np.__version__)
 print('TensorFlow ' + tf.__version__)
-print('Keras ' + tf.keras.version())
+##print('Keras ' + tf.keras.version())
 
 nsamples = 1000
 val_ratio = 0.2
@@ -29,6 +29,7 @@ assert(x_train.size + x_val.size + x_test.size) == nsamples
 print("dataset splited")
 
 model = tf.keras.Sequential()
+model.add(layers.Reshape((1,)))
 model.add(layers.Dense(16, activation='relu', input_shape=(1,)))
 model.add(layers.Dense(16, activation='relu'))
 model.add(layers.Dense(1))
@@ -90,3 +91,5 @@ def hex_to_c_array(hex_data, var_name):
 
 with open(c_model_name + '.h', 'w') as file:
   file.write(hex_to_c_array(tflite_model, c_model_name))
+  
+print("Finished")
