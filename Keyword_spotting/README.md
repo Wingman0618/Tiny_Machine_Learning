@@ -22,3 +22,14 @@ Description:
 1. Remove Dense(128) layer
 1. Add Conv2D layer with 10 3*3 kernel
 1. Flatten the input and add Reshape layer ((4096,)->(128, 32, 1))
+
+05/18 2024 \
+model version 1.3
+model size before quantising: 21732 \
+model size after quantising: 9008 \
+Description:
+1. Shrink the 128 audio samples for better deployment samples generating
+1. Shrink the window size to 512, 32ms
+1. Shrink the ste to 256, 16ms
+1. Shrink the number of mels to 40
+1. New model is a bit underfiting, could be fixed by adding epoches
