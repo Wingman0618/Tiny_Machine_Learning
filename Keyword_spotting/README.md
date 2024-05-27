@@ -33,3 +33,13 @@ Description:
 1. Shrink the ste to 256, 16ms
 1. Shrink the number of mels to 40
 1. New model is a bit underfiting, could be fixed by adding epoches
+
+05/27 2024 \
+model version 1.4
+model size before quantising: 27260 \
+model size after quantising: 10472 \
+Description:
+1. Replace the librosa to custom mel spectrogram generator
+1. Add the number of kernal to 11
+1. Using amplitude to db instead of power to db for better quantilsation
+1. Model is fitted in about 97% accuracy

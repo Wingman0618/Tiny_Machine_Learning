@@ -1,9 +1,11 @@
 #include <TensorFlowLite.h>
 #include <PDM.h>
+#include <Complex.h>
 
 #include "test_input.h"
 
 #include "Ml_model.h"
+#include "dft.h"
 #include "Output_analysis.h"
 
 #include "tensorflow/lite/micro/micro_error_reporter.h"
@@ -16,6 +18,11 @@ namespace{
   // Audio samples
   short sampleBuffer[256];
   volatile int samplesRead;
+  int8_t inputBuffer[512];
+  bool is_full = false;
+  int pointer = 0;
+  int step_size = 256;
+  int window_size = 512;
   
   //Tensorflow namespace
   tflite::ErrorReporter *error_reporter = nullptr;
@@ -24,7 +31,7 @@ namespace{
   TfLiteTensor *model_input = nullptr;
   TfLiteTensor* model_output = nullptr;
 
-  constexpr int kTensorArenaSize =10 * 1024;
+  constexpr int kTensorArenaSize =50 * 1024;
   uint8_t tensor_arena[kTensorArenaSize];
   int8_t *model_input_buffer = nullptr;
 }
@@ -83,7 +90,7 @@ void setup() {
   model_output = interpreter->output(0);
 
   // Setup microphone
-  //Reference: https://docs.arduino.cc/learn/built-in-libraries/pdm/ 
+  // Reference: https://docs.arduino.cc/learn/built-in-libraries/pdm/ 
   PDM.onReceive(onPDMdata);
   PDM.begin(1, 16000);
   PDM.setGain(20);
@@ -91,15 +98,33 @@ void setup() {
 }
 
 void loop() {
-
+/*
+  float* result = (float*)malloc(16*sizeof(float));
+  result = dft_abs(input_test_sin, 16);
+  for(int i=0; i<16; i++){
+    Serial.print(result[i]);
+    Serial.print(" ");
+  }
+  Serial.print("\n");
+*/
+  if(pointer == window_size){
+    for(int i=0; i<step_size; i++){
+      inputBuffer[i] = inputBuffer[i+256];
+    }
+    pointer = step_size;
+  }
+  
   if(samplesRead){
     for(int i=0; i<samplesRead; i++){
+      inputBuffer[pointer]=sampleBuffer[i];
+      pointer += 1;
       Serial.println(sampleBuffer[i]);
     }
     samplesRead = 0;
   }
+
 // Faking inputs
-  for(int i=0; i<4096; i++){
+  for(int i=0; i<15420; i++){
     model_input_buffer[i] = input_val[i];
   }
 
@@ -112,26 +137,10 @@ void loop() {
   int8_t data_yes = model_output->data.int8[1];
 
   OutputCommands(data_no, data_yes);
-  /*
-  Serial.print(data_no);
-  Serial.print("  ");
-  Serial.println(data_yes);
 
-  if(data_no>=80){
-    digitalWrite(LEDB, HIGH);
-    digitalWrite(LEDG, HIGH);
-    digitalWrite(LEDR, LOW);
-  }else if(data_yes>=80){
-    digitalWrite(LEDB, HIGH);
-    digitalWrite(LEDR, HIGH);
-    digitalWrite(LEDG, LOW);
-  }else{
-    digitalWrite(LEDR, HIGH);
-    digitalWrite(LEDG, HIGH);
-    digitalWrite(LEDB, LOW);
-  }
-  */
+
   Serial.println("one loop");
+//  delay(5000);
 }
 
 void onPDMdata(){
