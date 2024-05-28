@@ -19,6 +19,8 @@ namespace{
   short sampleBuffer[256];
   volatile int samplesRead;
   int8_t inputBuffer[512];
+  double* inputBuffer_hamming = nullptr;
+  double* result = nullptr;
   bool is_full = false;
   int pointer = 0;
   int step_size = 256;
@@ -31,7 +33,7 @@ namespace{
   TfLiteTensor *model_input = nullptr;
   TfLiteTensor* model_output = nullptr;
 
-  constexpr int kTensorArenaSize =50 * 1024;
+  constexpr int kTensorArenaSize = 20 * 1024;
   uint8_t tensor_arena[kTensorArenaSize];
   int8_t *model_input_buffer = nullptr;
 }
@@ -76,7 +78,7 @@ void setup() {
   static tflite::MicroInterpreter static_interpreter(
     model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
   interpreter = &static_interpreter;
-
+/*
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if(allocate_status != kTfLiteOk){
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
@@ -88,7 +90,7 @@ void setup() {
   model_input_buffer = model_input->data.int8;
 
   model_output = interpreter->output(0);
-
+*/
   // Setup microphone
   // Reference: https://docs.arduino.cc/learn/built-in-libraries/pdm/ 
   PDM.onReceive(onPDMdata);
@@ -99,15 +101,22 @@ void setup() {
 
 void loop() {
 /*
-  float* result = (float*)malloc(16*sizeof(float));
-  result = dft_abs(input_test_sin, 16);
+  double* input_test_hamming = hamming_data(input_test_sin, 16);
+  double* result = dft_abs(input_test_hamming, 16);
   for(int i=0; i<16; i++){
     Serial.print(result[i]);
     Serial.print(" ");
   }
   Serial.print("\n");
 */
+
   if(pointer == window_size){
+    inputBuffer_hamming = hamming_data(inputBuffer, 512);
+    result = dft_abs(inputBuffer_hamming, 512);
+    for(int i=0; i<512; i++){
+      Serial.print(result[i]);
+      Serial.print(" ");
+    }
     for(int i=0; i<step_size; i++){
       inputBuffer[i] = inputBuffer[i+256];
     }
@@ -118,13 +127,16 @@ void loop() {
     for(int i=0; i<samplesRead; i++){
       inputBuffer[pointer]=sampleBuffer[i];
       pointer += 1;
-      Serial.println(sampleBuffer[i]);
+//      Serial.println(sampleBuffer[i]);
     }
     samplesRead = 0;
   }
 
+  free(inputBuffer_hamming);
+  free(result);
+/*
 // Faking inputs
-  for(int i=0; i<15420; i++){
+  for(int i=0; i<15872; i++){
     model_input_buffer[i] = input_val[i];
   }
 
@@ -138,9 +150,9 @@ void loop() {
 
   OutputCommands(data_no, data_yes);
 
-
+*/
   Serial.println("one loop");
-//  delay(5000);
+  delay(5000);
 }
 
 void onPDMdata(){
