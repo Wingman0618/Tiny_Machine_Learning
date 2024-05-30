@@ -31,6 +31,7 @@ namespace{
   double* rfft = nullptr;
   double* mel_spectrogram = nullptr;
   double* model_input_mel_db = nullptr;
+  int8_t* mel_db_quant = nullptr;
   double model_input_mel[2400];
   
   //Tensorflow namespace
@@ -114,6 +115,10 @@ void loop() {
 //      Serial.print(" ");
 //    }
     model_input_mel_db = amplitude_to_db(model_input_mel, 2400);
+    mel_db_quant = quantisation(model_input_mel_db, 2400);
+    for(int i=0; i<2400; i++){
+      model_input_buffer[i] = mel_db_quant[i];
+    }
     for(int i=0; i<2360; i++){
       model_input_mel[i] = model_input_mel[i+40];
     }
@@ -148,9 +153,9 @@ void loop() {
   }
 
 // Faking inputs
-  for(int i=0; i<2400; i++){
-    model_input_buffer[i] = input_val[i];
-  }
+//  for(int i=0; i<2400; i++){
+//    model_input_buffer[i] = input_val[i];
+//  }
 
   TfLiteStatus invoke_status = interpreter->Invoke();
   if (invoke_status != kTfLiteOk) {
@@ -167,6 +172,7 @@ void loop() {
   free(rfft);
   free(mel_spectrogram);
   free(model_input_mel_db);
+  free(mel_db_quant);
   Serial.println("one loop");
 //  delay(1000);
 }

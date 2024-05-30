@@ -12,7 +12,7 @@ library for complex number computing: https://github.com/RobTillaart/Complex/tre
 #include <cfloat>
 
 using namespace std;
-
+// Referance: https://www.geeksforgeeks.org/iterative-fast-fourier-transformation-polynomial-multiplication/
 unsigned int bitReverse(unsigned int x, int log2n){
   int n=0;
 
@@ -202,4 +202,32 @@ double* amplitude_to_db(double* mel_spec, int input_size){
   }
   
   return mel_spec_db;  
+}
+
+int8_t* quantisation(double* input_arr, int input_size){
+  int8_t* quant_result = (int8_t*)malloc(input_size*sizeof(int8_t));
+
+  double max_ = INT_MIN;
+  double min_ = INT_MAX;
+  for(int i=0; i<input_size; i++){
+    if(*(input_arr+i) > max_){
+      max_ = *(input_arr+i);
+    }else{
+      max_ = max_;
+    }
+    if(*(input_arr+i) < min_){
+      min_ = *(input_arr+i);
+    }else{
+      min_ = min_;
+    }
+  }
+
+  double scale = 255/(max_ - min_);
+  int zeropoint = -int(scale-min_+0.5)-128;
+  
+  for(int i=0; i<input_size; i++){
+    *(quant_result+i) = int8_t(scale*input_arr[i]+zeropoint+0.5);
+  }
+
+  return quant_result;
 }
